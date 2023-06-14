@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   telegramId: {
@@ -10,11 +10,21 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  firstName: String,
+  firstName: {
+    type: String,
+  },
+  phone: {
+    type: String,
+  },
   isAuthorized: {
     type: Boolean,
     default: false,
   },
+  lastAuthorizationDate: {
+    type: Date,
+  },
 });
 
-module.exports = mongoose.model("User", userSchema);
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;

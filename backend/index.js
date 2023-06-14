@@ -1,19 +1,12 @@
 
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
-const {handleStartCommand, handleAuthorizeCallback } = require("./controllers/UserController");
+const {handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
 const User = require("./schemas/User");
 
-const _token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4'; // Установите свой токен
+const _token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4';
 
-const bot = new TelegramBot(_token, { polling: {
-    interval: 300,
-    autoStart: true,
-    params: {
-      timeout: 10
-    }
-  }
-});
+const bot = new TelegramBot(_token, { polling: true });
 
 mongoose
   .connect(
@@ -27,11 +20,16 @@ bot.onText(/\/start/, (msg) => {
   handleStartCommand(msg, bot);
 });
 
-bot.on('callback_query', (query) => {
-  if (query.data === 'authorize_user') {
-    handleAuthorizeCallback(query, bot);
-  }
+bot.on('contact', (msg) => {
+  handleContactMessage(msg, bot);
 });
 
+bot.onText(/\/stop/, (msg) => {
+  handleStopCommand(msg, bot);
+});
+// Check authorization status every hour
+setInterval(() => {
+  checkAuthorizationStatus(bot);
+}, 60 * 60 * 1000);
 
 console.log('Bot has been started');
