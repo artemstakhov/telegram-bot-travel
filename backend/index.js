@@ -1,12 +1,19 @@
 
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
-const { handleMessage, handleStartCommand, handleAuthorizeCallback } = require("./controllers/UserController");
+const {handleStartCommand, handleAuthorizeCallback } = require("./controllers/UserController");
 const User = require("./schemas/User");
 
-const token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4'; // Установите свой токен
+const _token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4'; // Установите свой токен
 
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(_token, { polling: {
+    interval: 300,
+    autoStart: true,
+    params: {
+      timeout: 10
+    }
+  }
+});
 
 mongoose
   .connect(
@@ -26,10 +33,5 @@ bot.on('callback_query', (query) => {
   }
 });
 
-bot.on('message', (msg) => {
-  if (!msg.text.startsWith('/start')) {
-    handleMessage(msg, bot);
-  }
-});
 
-console.log('Bot started');
+console.log('Bot has been started');
