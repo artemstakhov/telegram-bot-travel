@@ -22,6 +22,24 @@ async function sendAuthorizationRequest(chatId, bot) {
   bot.sendMessage(chatId, 'You are not authorized. Please authorize by sending your contact.', options);
 }
 
+async function sendLocationRequest(chatId, bot) {
+  const options = {
+    reply_markup: {
+      keyboard: [
+        [
+          {
+            text: 'Send location',
+            request_location: true,
+          },
+        ],
+      ],
+      resize_keyboard: true,
+    },
+  };
+
+  bot.sendMessage(chatId, 'Please send your location.', options);
+}
+
 async function handleStartCommand(msg, bot) {
   const chatId = msg.chat.id;
 
@@ -36,6 +54,7 @@ async function handleStartCommand(msg, bot) {
       sendAuthorizationRequest(chatId, bot);
     } else {
       sendAlreadyAuthorizedMessage(chatId, bot);
+      sendLocationRequest(chatId, bot); // Request location after authorization
     }
   } else {
     sendAuthorizationRequest(chatId, bot);
@@ -59,6 +78,7 @@ async function handleContactMessage(msg, bot) {
       bot.sendMessage(chatId, 'You are successfully authorized!').then(() => {
         // Remove the custom keyboard after sending the message
         bot.sendMessage(chatId, 'Authorized!', { reply_markup: { remove_keyboard: true } });
+        sendLocationRequest(chatId, bot); // Request location after authorization
       });
     } catch (err) {
       console.error('Error with saving user', err);
@@ -71,7 +91,11 @@ async function handleContactMessage(msg, bot) {
       firstName: msg.from.first_name,
       phone: msg.contact.phone_number,
       isAuthorized: true,
-      lastAuthorizationDate: Date.now(), // Сохраняем текущую дату и время авторизации
+      lastAuthorizationDate: Date.now(),
+      location: {
+        latitude: 0,
+        longitude: 0
+      } // Сохраняем текущую дату и время авторизации
     });
 
     try {
@@ -79,6 +103,7 @@ async function handleContactMessage(msg, bot) {
       bot.sendMessage(chatId, 'You are successfully authorized!').then(() => {
         // Remove the custom keyboard after sending the message
         bot.sendMessage(chatId, 'Authorized!', { reply_markup: { remove_keyboard: true } });
+        sendLocationRequest(chatId, bot); // Request location after authorization
       });
     } catch (err) {
       console.error('Error with saving user', err);
@@ -113,6 +138,43 @@ async function handleStopCommand(msg, bot) {
   }
 }
 
+async function handleLocationMessage(msg, bot) {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+  const {latitude, longitude} = msg.location;
+
+  const existingUser = await User.findOne({ telegramId: userId });
+
+  if (existingUser) {
+    // Если у пользователя уже есть объект location, обновляем только latitude и longitude
+    if (existingUser.location) {
+      existingUser.location.latitude = latitude;
+      existingUser.location.longitude = longitude;
+    } else {
+      // Если у пользователя еще нет объекта location, создаем новый объект и присваиваем ему значения latitude и longitude
+      existingUser.location = {
+        latitude: latitude,
+        longitude: longitude,
+      };
+    }
+
+    try {
+      await existingUser.save();
+      bot.sendMessage(chatId, 'Location saved successfully.',{ reply_markup: { remove_keyboard: true } });
+    } catch (err) {
+      console.error('Error with saving user location', err);
+      bot.sendMessage(chatId, 'Error saving location, try later.');
+    }
+  } else {
+    bot.sendMessage(chatId, 'User not found.').then(() => {
+      handleStartCommand(msg, bot);
+    });
+  }
+}
+
+
+
+
 async function checkAuthorizationStatus(bot) {
   const users = await User.find();
 
@@ -135,4 +197,10 @@ async function checkAuthorizationStatus(bot) {
   });
 }
 
-module.exports = { handleStartCommand, handleContactMessage, handleStopCommand, checkAuthorizationStatus };
+module.exports = {
+  handleStartCommand,
+  handleContactMessage,
+  handleStopCommand,
+  handleLocationMessage,
+  checkAuthorizationStatus,
+};

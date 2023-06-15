@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
-const {handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
+const {handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
 const User = require("./schemas/User");
 
 const _token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4';
@@ -22,6 +22,10 @@ bot.onText(/\/start/, (msg) => {
 
 bot.on('contact', (msg) => {
   handleContactMessage(msg, bot);
+});
+
+bot.on('location', (msg) => {
+  handleLocationMessage(msg, bot);
 });
 
 bot.onText(/\/stop/, (msg) => {

@@ -23,6 +23,16 @@ const userSchema = new mongoose.Schema({
   lastAuthorizationDate: {
     type: Date,
   },
+  location: {
+    type: {
+      latitude: {
+        type: Number,
+      },
+      longitude: {
+        type: Number,
+      },
+    },
+  },
 });
 
 const User = mongoose.model('User', userSchema);
