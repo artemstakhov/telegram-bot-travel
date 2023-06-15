@@ -76,32 +76,41 @@ async function sendPlaceDescription(chatId, bot, place) {
 }
 
 async function sendPlaceRating(chatId, bot, place) {
-  bot.sendMessage(chatId, 'Please enter the rating of the place (from 1 to 5):')
-    .then(() => {
-      bot.once('text', (msg) => {
-        const rating = parseInt(msg.text);
-        if (isNaN(rating) || rating < 1 || rating > 5) {
-          bot.sendMessage(chatId, 'Invalid rating. Please enter a number from 1 to 5.');
-          sendPlaceRating(chatId, bot, place);
-        } else {
-          place.rating = rating;
-          savePlace(chatId, bot, place);
-        }
+    bot.sendMessage(chatId, 'Please enter the rating of the place (from 1 to 5):')
+      .then(() => {
+        bot.once('text', (msg) => {
+          const rating = parseInt(msg.text);
+          if (isNaN(rating) || rating < 1 || rating > 5) {
+            bot.sendMessage(chatId, 'Invalid rating. Please enter a number from 1 to 5.');
+            sendPlaceRating(chatId, bot, place);
+          } else {
+            if (!Array.isArray(place.all_rating)) {
+              place.all_rating = []; // Инициализируем all_rating как пустой массив, если оно еще не является массивом
+            }
+            place.all_rating.push(rating); // Добавляем рейтинг в массив all_rating с использованием метода push()
+            savePlace(chatId, bot, place);
+          }
+        });
       });
-    });
-}
-
-async function savePlace(chatId, bot, place) {
-  const newPlace = new Place(place);
-
-  try {
-    await newPlace.save();
-    bot.sendMessage(chatId, 'Place added successfully!');
-  } catch (err) {
-    console.error('Error saving place', err);
-    bot.sendMessage(chatId, 'Error saving place. Please try again later.');
   }
-}
+  
+
+  async function savePlace(chatId, bot, place) {
+    const newPlace = new Place(place);
+  
+    try {
+      const sum = place.all_rating.reduce((total, rating) => total + rating, 0);
+      const averageRating = sum / place.all_rating.length;
+      newPlace.rating = averageRating; // Вычисляем среднее арифметическое и записываем его в place.rating
+  
+      await newPlace.save();
+      bot.sendMessage(chatId, 'Place added successfully!');
+    } catch (err) {
+      console.error('Error saving place', err);
+      bot.sendMessage(chatId, 'Error saving place. Please try again later.');
+    }
+  }
+  
 
 async function handleAddPlaceCommand(chatId, bot) {
   const place = {};

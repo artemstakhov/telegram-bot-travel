@@ -10,9 +10,8 @@ const placeSchema = new mongoose.Schema({
       required: true,
     },
     rating: {
-      type: Number,
-      required: true,
-    },
+        type: Number,
+      },
     all_rating: [Number],
     photos: [
       {
