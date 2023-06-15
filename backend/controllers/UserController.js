@@ -36,8 +36,10 @@ async function sendLocationRequest(chatId, bot) {
       resize_keyboard: true,
     },
   };
-
-  bot.sendMessage(chatId, 'Please send your location.', options);
+  setTimeout(() => {
+    bot.sendMessage(chatId, 'Please send your location.', options);
+  },100);
+  
 }
 
 async function handleStartCommand(msg, bot) {
@@ -75,9 +77,8 @@ async function handleContactMessage(msg, bot) {
 
     try {
       await existingUser.save();
-      bot.sendMessage(chatId, 'You are successfully authorized!').then(() => {
+      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } }).then(() => {
         // Remove the custom keyboard after sending the message
-        bot.sendMessage(chatId, 'Authorized!', { reply_markup: { remove_keyboard: true } });
         sendLocationRequest(chatId, bot); // Request location after authorization
       });
     } catch (err) {
@@ -100,9 +101,8 @@ async function handleContactMessage(msg, bot) {
 
     try {
       await newUser.save();
-      bot.sendMessage(chatId, 'You are successfully authorized!').then(() => {
+      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } }).then(() => {
         // Remove the custom keyboard after sending the message
-        bot.sendMessage(chatId, 'Authorized!', { reply_markup: { remove_keyboard: true } });
         sendLocationRequest(chatId, bot); // Request location after authorization
       });
     } catch (err) {
@@ -146,12 +146,10 @@ async function handleLocationMessage(msg, bot) {
   const existingUser = await User.findOne({ telegramId: userId });
 
   if (existingUser) {
-    // Если у пользователя уже есть объект location, обновляем только latitude и longitude
     if (existingUser.location) {
       existingUser.location.latitude = latitude;
       existingUser.location.longitude = longitude;
     } else {
-      // Если у пользователя еще нет объекта location, создаем новый объект и присваиваем ему значения latitude и longitude
       existingUser.location = {
         latitude: latitude,
         longitude: longitude,
@@ -188,7 +186,9 @@ async function checkAuthorizationStatus(bot) {
         user.isAuthorized = false;
         try {
           await user.save();
-          bot.sendMessage(user.telegramId, 'You have been automatically logged out due to inactivity.');
+          bot.sendMessage(user.telegramId, 'You have been automatically logged out due to inactivity.', {
+            disable_notification: true
+          });
         } catch (err) {
           console.error('Error with saving user', err);
         }
@@ -196,6 +196,11 @@ async function checkAuthorizationStatus(bot) {
     }
   });
 }
+
+
+
+
+// ...
 
 module.exports = {
   handleStartCommand,
