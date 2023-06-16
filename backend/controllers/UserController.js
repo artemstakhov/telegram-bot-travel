@@ -56,11 +56,11 @@ async function handleStartCommand(msg, bot) {
       sendAuthorizationRequest(chatId, bot);
     } else {
       sendAlreadyAuthorizedMessage(chatId, bot);
-      sendLocationRequest(chatId, bot); // Request location after authorization
     }
   } else {
     sendAuthorizationRequest(chatId, bot);
   }
+  sendLocationRequest(chatId, bot); // Move this line here
 }
 
 async function handleContactMessage(msg, bot) {
@@ -77,10 +77,7 @@ async function handleContactMessage(msg, bot) {
 
     try {
       await existingUser.save();
-      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } }).then(() => {
-        // Remove the custom keyboard after sending the message
-        sendLocationRequest(chatId, bot); // Request location after authorization
-      });
+      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } });
     } catch (err) {
       console.error('Error with saving user', err);
       bot.sendMessage(chatId, 'Error, try later.');
@@ -101,16 +98,15 @@ async function handleContactMessage(msg, bot) {
 
     try {
       await newUser.save();
-      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } }).then(() => {
-        // Remove the custom keyboard after sending the message
-        sendLocationRequest(chatId, bot); // Request location after authorization
-      });
+      bot.sendMessage(chatId, 'You are successfully authorized!', { reply_markup: { remove_keyboard: true } });
     } catch (err) {
       console.error('Error with saving user', err);
       bot.sendMessage(chatId, 'Error, try later.');
     }
   }
+  sendLocationRequest(chatId, bot); // Move this line here
 }
+
 
 async function handleStopCommand(msg, bot) {
   const chatId = msg.chat.id;
@@ -197,10 +193,6 @@ async function checkAuthorizationStatus(bot) {
   });
 }
 
-
-
-
-// ...
 
 module.exports = {
   handleStartCommand,
