@@ -5,7 +5,6 @@ const axios = require('axios');
 const sendAuthorizationRequest = require("../controllers/UserController");
 const User = require("../schemas/User");
 
-
 const cloneDeep = (obj) => {
   return JSON.parse(JSON.stringify(obj));
 };
@@ -40,7 +39,6 @@ async function handleOptionalButtons(chatId, bot) {
   }
 }
 
-
 async function sendPlaceLocation(chatId, bot, place) {
   const options = {
     reply_markup: {
@@ -66,7 +64,7 @@ async function sendPlaceLocation(chatId, bot, place) {
           longitude,
         };
         setTimeout(() => {
-          sendPlaceName(chatId, bot, cloneDeep(place));
+          sendPlaceName(chatId, bot, place);
         }, 100)
 
       });
@@ -79,7 +77,7 @@ async function sendPlaceName(chatId, bot, place) {
       bot.once('text', (msg) => {
         const name = msg.text;
         place.name = name;
-        sendPlaceDescription(chatId, bot, cloneDeep(place));
+        sendPlaceDescription(chatId, bot, place);
       });
     });
 }
@@ -90,7 +88,7 @@ async function sendPlaceDescription(chatId, bot, place) {
       bot.once('text', (msg) => {
         const description = msg.text;
         place.description = description;
-        sendPlaceRating(chatId, bot, cloneDeep(place));
+        sendPlaceRating(chatId, bot, place);
       });
     });
 }
@@ -102,108 +100,69 @@ async function sendPlaceRating(chatId, bot, place) {
         const rating = parseInt(msg.text);
         if (isNaN(rating) || rating < 1 || rating > 5) {
           bot.sendMessage(chatId, 'Invalid rating. Please enter a number from 1 to 5.');
-          sendPlaceRating(chatId, bot, cloneDeep(place));
+          sendPlaceRating(chatId, bot, place);
         } else {
           if (!Array.isArray(place.all_rating)) {
             place.all_rating = [];
           }
           place.all_rating.push(rating);
-          sendPhotoRequest(chatId, bot, cloneDeep(place));
+          sendPhotoRequest(chatId, bot, place);
         }
       });
     });
 }
 
-async function downloadPhoto(url, destination) {
-  const writer = fs.createWriteStream(destination);
-
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'stream',
-  });
-
-  response.data.pipe(writer);
-
-  return new Promise((resolve, reject) => {
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
-}
-
-let photoHandlerAdded = false;
-let sendPhotosHandlerAdded = false;
-
-
 async function sendPhotoRequest(chatId, bot, place) {
-  let newPlace = cloneDeep(place);
+  bot.sendMessage(chatId, 'Please send one or more photos of the place:');
 
-  newPlace.photos = [];
-  bot.sendMessage(chatId, 'Please send up to 5 photos of the place. Send them one by one or click "Send Photos" when finished.')
-    .then(() => {
-      const options = {
-        reply_markup: {
-          keyboard: [
-            [
-              {
-                text: 'Send Photos',
-              },
-            ],
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: true,
-        },
-      };
-      bot.sendMessage(chatId, 'Send Photos', options);
-      if (!photoHandlerAdded) {
-        bot.on('photo', (msg) => {
-          if (newPlace.photos.length >= 5) {
-            // Если уже получено 5 фотографий, игнорируем остальные
-            return;
-          }
+  const messageHandler = async (msg) => {
+    if (msg.photo) {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
 
-          const photoId = msg.photo[0].file_id;
-          bot.getFile(photoId).then((file) => {
-            const photoName = `${newPlace.name}_${newPlace.photos.length + 1}`; // Изменяем формат названия фотографий
-            const photoPath = path.join(__dirname, '..', 'photos', `${photoName}.jpg`);
-            const downloadUrl = `https://api.telegram.org/file/bot${bot.token}/${file.file_path}`;
+      // Получаем информацию о фотографии по её file_id
+      const fileInfo = await bot.getFile(fileId);
 
-            downloadPhoto(downloadUrl, photoPath)
-              .then(() => {
-                newPlace.photos.push(photoPath);
-                if (newPlace.photos.length >= 5) {
-                  // Проверяем, есть ли уже обработчик sendPhotosHandler
-                  if (sendPhotosHandlerAdded) {
-                    savePlace(chatId, bot, cloneDeep(newPlace)); // Используем newPlace для сохранения
-                  }
-                }
-              })
-              .catch((error) => {
-                console.error('Error downloading photo', error);
-                bot.sendMessage(chatId, 'Error downloading photo. Please try again.');
-              });
-          });
-        });
-        photoHandlerAdded = true;
+      const fileUrl = `https://api.telegram.org/file/bot${bot.token}/${fileInfo.file_path}`;
+
+      // Генерируем уникальное имя файла для сохранения
+      const fileName = `${Date.now()}_${fileId}.jpg`;
+
+      // Путь к папке для сохранения фотографий
+      const photosFolderPath = path.join(__dirname, '../photos');
+
+      // Создаем папку, если она не существует
+      if (!fs.existsSync(photosFolderPath)) {
+        fs.mkdirSync(photosFolderPath);
       }
-      //норм
-      if (!sendPhotosHandlerAdded) {
-        console.log(place);
-        //не норм
-        bot.onText(/Send Photos/, (msg) => {
-          if (newPlace.photos.length > 0) {
 
-            if (photoHandlerAdded) { 
-              
-              savePlace(chatId, bot, cloneDeep(newPlace)); 
-            }
-          } else {
-            bot.sendMessage(chatId, 'Please send at least one photo of the place.');
-          }
-        });
-        sendPhotosHandlerAdded = true;
-      }
-    });
+      const filePath = path.join(photosFolderPath, fileName);
+
+      // Скачиваем фотографию
+      const response = await axios({
+        method: 'GET',
+        url: fileUrl,
+        responseType: 'stream',
+      });
+
+      response.data.pipe(fs.createWriteStream(filePath));
+
+      // Добавляем путь к файлу в массив place.photos[]
+      place.photos = place.photos || [];
+      place.photos.push(filePath);
+
+      // Продолжаем ожидать отправки следующей фотографии
+      bot.sendMessage(chatId, 'Photo received! Please send the next one, or send any other message to finish.');
+    } else {
+      // Если получено сообщение, не являющееся фотографией, вызываем метод savePlace
+      savePlace(chatId, bot, place);
+
+      // Отключаем обработчик события message
+      bot.off('message', messageHandler);
+    }
+  };
+
+  // Ожидаем отправку фотографий или сообщения, не являющегося фотографией
+  bot.on('message', messageHandler);
 }
 
 
@@ -211,7 +170,7 @@ async function sendPhotoRequest(chatId, bot, place) {
 
 async function savePlace(chatId, bot, place) {
   console.log('save');
-  let newPlace = new Place(cloneDeep(place));
+  let newPlace = new Place(place);
   try {
     const sum = place.all_rating.reduce((total, rating) => total + rating, 0);
     const averageRating = sum / place.all_rating.length;
@@ -232,8 +191,6 @@ async function savePlace(chatId, bot, place) {
   }
 }
 
-
-
 async function handleAddPlaceCommand(chatId, bot, userId) {
   const place = {
     user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
@@ -248,5 +205,5 @@ async function handleFindPlaceCommand(chatId, bot) {
 module.exports = {
   handleAddPlaceCommand,
   handleFindPlaceCommand,
-  handleOptionalButtons
+  handleOptionalButtons,
 };
