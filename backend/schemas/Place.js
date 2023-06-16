@@ -13,11 +13,7 @@ const placeSchema = new mongoose.Schema({
         type: Number,
       },
     all_rating: [Number],
-    photos: [
-      {
-        type: String,
-      },
-    ],
+    photos: [String],
     location: {
       latitude: {
         type: Number,
@@ -25,6 +21,9 @@ const placeSchema = new mongoose.Schema({
       longitude: {
         type: Number,
       },
+    },
+    user_id: {
+      type: Number,
     },
   });
   
