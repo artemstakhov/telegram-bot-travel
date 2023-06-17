@@ -175,7 +175,6 @@ async function sendPhotoRequest(chatId, bot, place) {
 
 // Saves the place information to the database.
 async function savePlace(chatId, bot, place) {
-  console.log('save');
   let newPlace = new Place(place); // Create a new instance of the Place model with the provided place information
   try {
     const sum = place.all_rating.reduce((total, rating) => total + rating, 0); // Calculate the sum of all ratings

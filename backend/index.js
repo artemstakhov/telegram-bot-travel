@@ -3,21 +3,25 @@ const path = require('path');
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
 const {handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
-const {handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel} = require("./controllers/PlaceController")
-const User = require("./schemas/User");
-const Place = require("./schemas/Place");
+const {handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel} = require("./controllers/PlaceController");
+require('dotenv').config();
 
-const _token = '6065218921:AAGmb6DqIRuCuQqJ7FsHz_53ar6wwGSifb4';
-
-const bot = new TelegramBot(_token, { polling: true });
+const bot = new TelegramBot(process.env.TOKEN, { polling: true });
 
 mongoose
   .connect(
-    "mongodb+srv://artyomstahov33:1029artyom@tg-bot.itzvp0e.mongodb.net/?retryWrites=true&w=majority",
+    process.env.dbLink,
     { useNewUrlParser: true, useUnifiedTopology: true }
   )
   .then(() => console.log("DB connected"))
   .catch((err) => console.log("DB error", err));
+
+const myCommands = [{ command: '/start', description: 'start your conversation' }, 
+{ command: '/stop', description: 'logout' }, 
+{ command: '/places', description: 'add or find place' }];
+
+
+bot.setMyCommands(myCommands);
 
 bot.onText(/\/start/, (msg) => {
   handleStartCommand(msg, bot);
@@ -56,8 +60,7 @@ bot.on('callback_query', (msg) => {
   const userId = msg.from.id; // Use the correct field to get the user_id value
 
   if (data === 'add_place_button') {
-    handleAddPlaceCommand(chatId, bot, userId); // Pass userId to the handleAddPlaceCommand function
-
+    handleAddPlaceCommand(chatId, bot, userId);// Pass userId to the handleAddPlaceCommand function
     // Get the message identifier
     const messageId = msg.message.message_id;
 
@@ -79,8 +82,6 @@ bot.on('callback_query', (msg) => {
     );
   }
 });
-
-
 
 bot.onText(/\/stop/, (msg) => {
   handleStopCommand(msg, bot);
