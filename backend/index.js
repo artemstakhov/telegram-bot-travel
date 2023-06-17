@@ -3,7 +3,7 @@ const path = require('path');
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
 const {handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
-const {handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand} = require("./controllers/PlaceController")
+const {handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel} = require("./controllers/PlaceController")
 const User = require("./schemas/User");
 const Place = require("./schemas/Place");
 
@@ -50,34 +50,31 @@ bot.onText(/\/places/, (msg) => {
 
 
 //call back for add place and find place
-//call back for add place and find place
 bot.on('callback_query', (msg) => {
   const data = msg.data;
   const chatId = msg.from.id;
-  const userId = msg.from.id; // Используйте нужное поле для получения значения user_id
+  const userId = msg.from.id; // Use the correct field to get the user_id value
 
   if (data === 'add_place_button') {
-    // Обрабатываем нажатие на кнопку "Add Place"
-    handleAddPlaceCommand(chatId, bot, userId); // Передаем userId в функцию handleAddPlaceCommand
+    handleAddPlaceCommand(chatId, bot, userId); // Pass userId to the handleAddPlaceCommand function
 
-    // Получаем идентификатор сообщения
+    // Get the message identifier
     const messageId = msg.message.message_id;
 
-    // Удаляем только кнопку "Add Place" из сообщения
+    // Remove only the "Add Place" button from the message
     bot.editMessageReplyMarkup(
-      { inline_keyboard: [[]] }, // Пустой массив кнопок
+      { inline_keyboard: [[]] }, // Empty array of buttons
       { chat_id: chatId, message_id: messageId }
     );
   } else if (data === 'find_place_button') {
-    // Обрабатываем нажатие на кнопку "Find Place"
     handleFindPlaceCommand(chatId, bot);
 
-    // Получаем идентификатор сообщения
+    // Get the message identifier
     const messageId = msg.message.message_id;
 
-    // Удаляем только кнопку "Find Place" из сообщения
+    // Remove only the "Find Place" button from the message
     bot.editMessageReplyMarkup(
-      { inline_keyboard: [[]] }, // Пустой массив кнопок
+      { inline_keyboard: [[]] }, // Empty array of buttons
       { chat_id: chatId, message_id: messageId }
     );
   }

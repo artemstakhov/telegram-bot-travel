@@ -9,11 +9,12 @@ const cloneDeep = (obj) => {
   return JSON.parse(JSON.stringify(obj));
 };
 
+//Handles optional button actions based on user authorization status.
 async function handleOptionalButtons(chatId, bot) {
   const user = await User.findOne({ telegramId: chatId });
 
   if (!user || !user.isAuthorized) {
-    // Если пользователь не авторизован, вызываем авторизацию
+    // if user !auth start auth
     sendAuthorizationRequest(chatId, bot);
   } else {
     const options = {
@@ -39,6 +40,7 @@ async function handleOptionalButtons(chatId, bot) {
   }
 }
 
+//Sends a request for the user to send their location.
 async function sendPlaceLocation(chatId, bot, place) {
   const options = {
     reply_markup: {
@@ -65,12 +67,13 @@ async function sendPlaceLocation(chatId, bot, place) {
         };
         setTimeout(() => {
           sendPlaceName(chatId, bot, place);
-        }, 100)
+        }, 1000)
 
       });
     });
 }
 
+//Sends a request for the user to enter the name of a place.
 async function sendPlaceName(chatId, bot, place) {
   bot.sendMessage(chatId, 'Please enter the name of the place:')
     .then(() => {
@@ -82,6 +85,7 @@ async function sendPlaceName(chatId, bot, place) {
     });
 }
 
+// Sends a request for the user to enter the description of a place.
 async function sendPlaceDescription(chatId, bot, place) {
   bot.sendMessage(chatId, 'Please enter the description of the place:')
     .then(() => {
@@ -93,51 +97,54 @@ async function sendPlaceDescription(chatId, bot, place) {
     });
 }
 
+// Sends a request for the user to enter the rating of a place.
 async function sendPlaceRating(chatId, bot, place) {
   bot.sendMessage(chatId, 'Please enter the rating of the place (from 1 to 5):')
     .then(() => {
       bot.once('text', (msg) => {
-        const rating = parseInt(msg.text);
+        const rating = parseInt(msg.text); // Parse the rating value as an integer
         if (isNaN(rating) || rating < 1 || rating > 5) {
-          bot.sendMessage(chatId, 'Invalid rating. Please enter a number from 1 to 5.');
-          sendPlaceRating(chatId, bot, place);
+          bot.sendMessage(chatId, 'Invalid rating. Please enter a number from 1 to 5.'); // If the rating is not a valid number from 1 to 5, send an error message
+          sendPlaceRating(chatId, bot, place); // Prompt the user to enter a valid rating again
         } else {
           if (!Array.isArray(place.all_rating)) {
             place.all_rating = [];
           }
-          place.all_rating.push(rating);
-          sendPhotoRequest(chatId, bot, place);
+          place.all_rating.push(rating); // Add the rating to the array of all ratings for the place
+          sendPhotoRequest(chatId, bot, place); // Proceed to request photos for the place
         }
       });
     });
 }
 
+
+// Sends a request for the user to send one or more photos of a place.
 async function sendPhotoRequest(chatId, bot, place) {
   bot.sendMessage(chatId, 'Please send one or more photos of the place:');
 
   const messageHandler = async (msg) => {
     if (msg.photo) {
-      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      const fileId = msg.photo[msg.photo.length - 1].file_id; // Retrieve the file ID of the received photo
 
-      // Получаем информацию о фотографии по её file_id
+      // Get information about the photo using its file ID
       const fileInfo = await bot.getFile(fileId);
 
       const fileUrl = `https://api.telegram.org/file/bot${bot.token}/${fileInfo.file_path}`;
 
-      // Генерируем уникальное имя файла для сохранения
+      // Generate a unique file name for saving the photo
       const fileName = `${Date.now()}_${fileId}.jpg`;
 
-      // Путь к папке для сохранения фотографий
+      // Path to the folder for saving photos
       const photosFolderPath = path.join(__dirname, '../photos');
 
-      // Создаем папку, если она не существует
+      // Create the folder if it doesn't exist
       if (!fs.existsSync(photosFolderPath)) {
         fs.mkdirSync(photosFolderPath);
       }
 
       const filePath = path.join(photosFolderPath, fileName);
 
-      // Скачиваем фотографию
+      // Download the photo
       const response = await axios({
         method: 'GET',
         url: fileUrl,
@@ -146,51 +153,52 @@ async function sendPhotoRequest(chatId, bot, place) {
 
       response.data.pipe(fs.createWriteStream(filePath));
 
-      // Добавляем путь к файлу в массив place.photos[]
+      // Add the file path to the place.photos[] array
       place.photos = place.photos || [];
       place.photos.push(filePath);
 
-      // Продолжаем ожидать отправки следующей фотографии
+      // Continue to expect the next photo to be sent
       bot.sendMessage(chatId, 'Photo received! Please send the next one, or send any other message to finish.');
     } else {
-      // Если получено сообщение, не являющееся фотографией, вызываем метод savePlace
+      // If a message that is not a photo is received, call the savePlace method
       savePlace(chatId, bot, place);
 
-      // Отключаем обработчик события message
+      // Turn off the message event handler
       bot.off('message', messageHandler);
     }
   };
 
-  // Ожидаем отправку фотографий или сообщения, не являющегося фотографией
+  // Expect the delivery of photos or messages that are not photos
   bot.on('message', messageHandler);
 }
 
 
-
-
+// Saves the place information to the database.
 async function savePlace(chatId, bot, place) {
   console.log('save');
-  let newPlace = new Place(place);
+  let newPlace = new Place(place); // Create a new instance of the Place model with the provided place information
   try {
-    const sum = place.all_rating.reduce((total, rating) => total + rating, 0);
-    const averageRating = sum / place.all_rating.length;
-    newPlace.rating = averageRating; // avg rating
-    await newPlace.save();
-    place = {}; // Сбросить объект place
-    newPlace = {};
+    const sum = place.all_rating.reduce((total, rating) => total + rating, 0); // Calculate the sum of all ratings
+    const averageRating = sum / place.all_rating.length; // Calculate the average rating
+    newPlace.rating = averageRating; // Set the average rating for the new place
+    await newPlace.save(); // Save the new place to the database
+    place = {}; // Reset the place object
+    newPlace = {}; // Reset the newPlace object
     bot.sendMessage(chatId, 'Place added successfully!', {
       reply_markup: {
         remove_keyboard: true,
       },
-    });
+    }); // Send a success message to the user, and remove the keyboard
 
-    // Очистить сохраненные данны
+    // Clear saved data
   } catch (err) {
-    console.error('Error saving place', err);
-    bot.sendMessage(chatId, 'Error saving place. Please try again later.');
+    console.error('Error saving place', err); // Log the error message if saving the place fails
+    bot.sendMessage(chatId, 'Error saving place. Please try again later.'); // Send an error message to the user
   }
 }
 
+
+//Handles the "add place" command initiated by the user.
 async function handleAddPlaceCommand(chatId, bot, userId) {
   const place = {
     user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
@@ -198,6 +206,7 @@ async function handleAddPlaceCommand(chatId, bot, userId) {
   sendPlaceLocation(chatId, bot, place);
 }
 
+//Handles the "find place" command initiated by the user.
 async function handleFindPlaceCommand(chatId, bot) {
 
 }
