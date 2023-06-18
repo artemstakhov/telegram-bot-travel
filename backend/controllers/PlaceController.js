@@ -9,14 +9,17 @@ const cloneDeep = (obj) => {
   return JSON.parse(JSON.stringify(obj));
 };
 
+let isAdded = false; 
+
 //Handles optional button actions based on user authorization status.
 async function handleOptionalButtons(chatId, bot) {
   const user = await User.findOne({ telegramId: chatId });
 
   if (!user || !user.isAuthorized) {
     // if user !auth start auth
-    sendAuthorizationRequest(chatId, bot);
-  } else {
+    return sendAuthorizationRequest(chatId, bot);
+  }
+  
     const options = {
       reply_markup: {
         inline_keyboard: [
@@ -34,10 +37,10 @@ async function handleOptionalButtons(chatId, bot) {
       },
     };
 
-    const sentMessage = await bot.sendMessage(chatId, 'Please select an option:', options);
+    return !isAdded && await bot.sendMessage(chatId, 'Please select an option:', options);
 
     const messageId = sentMessage.message_id;
-  }
+  
 }
 
 //Sends a request for the user to send their location.
@@ -175,6 +178,7 @@ async function sendPhotoRequest(chatId, bot, place) {
 
 // Saves the place information to the database.
 async function savePlace(chatId, bot, place) {
+  isAdded=false;
   let newPlace = new Place(place); // Create a new instance of the Place model with the provided place information
   try {
     const sum = place.all_rating.reduce((total, rating) => total + rating, 0); // Calculate the sum of all ratings
@@ -199,6 +203,7 @@ async function savePlace(chatId, bot, place) {
 
 //Handles the "add place" command initiated by the user.
 async function handleAddPlaceCommand(chatId, bot, userId) {
+  isAdded = true;
   const place = {
     user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
   };
