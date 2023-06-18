@@ -9,7 +9,7 @@ const cloneDeep = (obj) => {
   return JSON.parse(JSON.stringify(obj));
 };
 
-let isAdded = false; 
+let isAdded = false;
 
 //Handles optional button actions based on user authorization status.
 async function handleOptionalButtons(chatId, bot) {
@@ -19,28 +19,28 @@ async function handleOptionalButtons(chatId, bot) {
     // if user !auth start auth
     return sendAuthorizationRequest(chatId, bot);
   }
-  
-    const options = {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: 'Add Place',
-              callback_data: 'add_place_button',
-            },
-            {
-              text: 'Find Place',
-              callback_data: 'find_place_button',
-            },
-          ],
+
+  const options = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: 'Add Place',
+            callback_data: 'add_place_button',
+          },
+          {
+            text: 'Find Place',
+            callback_data: 'find_place_button',
+          },
         ],
-      },
-    };
+      ],
+    },
+  };
 
-    return !isAdded && await bot.sendMessage(chatId, 'Please select an option:', options);
+  return !isAdded && await bot.sendMessage(chatId, 'Please select an option:', options);
 
-    const messageId = sentMessage.message_id;
-  
+  const messageId = sentMessage.message_id;
+
 }
 
 //Sends a request for the user to send their location.
@@ -178,7 +178,7 @@ async function sendPhotoRequest(chatId, bot, place) {
 
 // Saves the place information to the database.
 async function savePlace(chatId, bot, place) {
-  isAdded=false;
+  isAdded = false;
   let newPlace = new Place(place); // Create a new instance of the Place model with the provided place information
   try {
     const sum = place.all_rating.reduce((total, rating) => total + rating, 0); // Calculate the sum of all ratings
