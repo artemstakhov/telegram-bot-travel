@@ -1,7 +1,6 @@
 node_modules/
 README.md
-/photos/*
-!/photos/.gitkeep
+photos
 .vscode
 
 # Logs
