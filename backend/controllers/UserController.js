@@ -41,7 +41,7 @@ async function sendLocationRequest(chatId, bot) {
   };
   setTimeout(() => {
     bot.sendMessage(chatId, 'Please send your location.', options);
-  },100);
+  }, 100);
 }
 
 // Handles the "/start" command.

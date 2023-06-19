@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
-const {handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
-const {handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel} = require("./controllers/PlaceController");
+const { handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
+const { handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel } = require("./controllers/PlaceController");
 require('dotenv').config();
 
 const bot = new TelegramBot(process.env.TOKEN, { polling: true });
@@ -16,8 +16,8 @@ mongoose
   .then(() => console.log("DB connected"))
   .catch((err) => console.log("DB error", err));
 
-const myCommands = [{ command: '/start', description: 'start your conversation' }, 
-{ command: '/stop', description: 'logout' }, 
+const myCommands = [{ command: '/start', description: 'start your conversation' },
+{ command: '/stop', description: 'logout' },
 { command: '/places', description: 'add or find place' }];
 
 

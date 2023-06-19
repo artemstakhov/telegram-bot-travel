@@ -4,6 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const sendAuthorizationRequest = require("../controllers/UserController");
 const User = require("../schemas/User");
+const distance = require('google-distance-matrix');
 
 const cloneDeep = (obj) => {
   return JSON.parse(JSON.stringify(obj));
@@ -210,10 +211,75 @@ async function handleAddPlaceCommand(chatId, bot, userId) {
   sendPlaceLocation(chatId, bot, place);
 }
 
-//Handles the "find place" command initiated by the user.
-async function handleFindPlaceCommand(chatId, bot) {
 
+async function calculateDistance(origin, destination) {
+  return new Promise((resolve, reject) => {
+    distance.key(process.env.GOOGLE_MAPS_API_KEY);
+    distance.mode('driving');
+
+    const origins = [`${origin.latitude},${origin.longitude}`];
+    const destinations = [`${destination.latitude},${destination.longitude}`];
+
+    distance.matrix(origins, destinations, (err, distances) => {
+      if (err) {
+        reject(err);
+      } else if (!distances || distances.status !== 'OK') {
+        reject(new Error('Unable to calculate distance.'));
+      } else {
+        const distanceResult = distances.rows[0].elements[0].distance;
+        const km = Math.floor(distanceResult.value / 1000);
+        const m = distanceResult.value % 1000;
+
+        resolve({ km, m });
+      }
+    });
+  });
 }
+
+
+// Пример использования функции для подсчета расстояния для каждого места
+async function handleFindPlaceCommand(chatId, bot) {
+  try {
+    // Найти пользователя по chatId
+    const user = await User.findOne({ telegramId: chatId });
+
+    if (!user || !user.isAuthorized) {
+      // Если пользователь не найден или не авторизован, отправить запрос на авторизацию
+      return sendAuthorizationRequest(chatId, bot);
+    }
+
+    // Получить координаты пользователя
+    const userLocation = user.location;
+
+    // Получить все места из базы данных
+    const places = await Place.find({});
+
+    // Пройтись по каждому месту и подсчитать расстояние до пользователя
+    const distances = [];
+    for (const place of places) {
+      const placeLocation = place.location;
+
+      // Вызвать функцию calculateDistance для подсчета расстояния
+      const distanceResult = await calculateDistance(userLocation, placeLocation);
+
+      // Сохранить название места и расстояние в формате "Место - XXXX км XXXX м."
+      const formattedDistance = `${place.name} - ${distanceResult.km} км ${distanceResult.m} м.`;
+
+      distances.push(formattedDistance);
+    }
+
+    // Отправить пользователю список мест и расстояний
+    const message = distances.join('\n');
+    bot.sendMessage(chatId, message);
+  } catch (error) {
+    console.error('Error in handleFindPlaceCommand:', error);
+    bot.sendMessage(chatId, 'An error occurred. Please try again later.');
+  }
+}
+
+
+
+
 
 module.exports = {
   handleAddPlaceCommand,
