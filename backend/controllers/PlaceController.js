@@ -5,10 +5,7 @@ const axios = require('axios');
 const sendAuthorizationRequest = require("../controllers/UserController");
 const User = require("../schemas/User");
 const distance = require('google-distance-matrix');
-
-const cloneDeep = (obj) => {
-  return JSON.parse(JSON.stringify(obj));
-};
+require('dotenv').config();
 
 let isAdded = false;
 
@@ -211,6 +208,8 @@ async function handleAddPlaceCommand(chatId, bot, userId) {
   sendPlaceLocation(chatId, bot, place);
 }
 
+
+distance.key(process.env.GOOGLE_MAPS_API_KEY);
 
 async function calculateDistance(origin, destination) {
   return new Promise((resolve, reject) => {

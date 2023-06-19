@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.3.32",
     "axios": "^1.4.0",
     "dotenv": "^16.3.1",
     "google-distance-matrix": "^1.1.1",
