@@ -3,12 +3,12 @@ const path = require('path');
 const mongoose = require("mongoose");
 const TelegramBot = require('node-telegram-bot-api');
 const { handleLocationMessage, handleStopCommand, handleStartCommand, handleContactMessage, checkAuthorizationStatus } = require("./controllers/UserController");
-const { handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand, handleCancel } = require("./controllers/PlaceController");
+const { handleOptionalButtons, handleAddPlaceCommand, handleFindPlaceCommand} = require("./controllers/PlaceController");
 require('dotenv').config();
 
 const bot = new TelegramBot(process.env.TOKEN, { polling: true });
 
-mongoose
+mongoose  
   .connect(
     process.env.dbLink,
     { useNewUrlParser: true, useUnifiedTopology: true }
@@ -104,4 +104,4 @@ setInterval(() => {
   checkAuthorizationStatus(bot);
 }, 60 * 60 * 1000);
 
-console.log('Bot has been started');
+console.log('Bot has been start');
