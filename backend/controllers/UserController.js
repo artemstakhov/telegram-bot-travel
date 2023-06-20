@@ -222,4 +222,5 @@ module.exports = {
   handleStopCommand,
   handleLocationMessage,
   checkAuthorizationStatus,
+  sendAuthorizationRequest
 };

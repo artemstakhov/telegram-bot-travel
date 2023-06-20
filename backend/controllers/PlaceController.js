@@ -2,7 +2,7 @@ const Place = require("../schemas/Place");
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const sendAuthorizationRequest = require("../controllers/UserController");
+const { sendAuthorizationRequest } = require("../controllers/UserController");
 const User = require("../schemas/User");
 const distance = require('google-distance-matrix');
 require('dotenv').config();
@@ -208,17 +208,17 @@ async function handleAddPlaceCommand(chatId, bot, userId) {
   sendPlaceLocation(chatId, bot, place);
 }
 
-
 distance.key(process.env.GOOGLE_MAPS_API_KEY);
 
+// Function to calculate the distance between two points
 async function calculateDistance(origin, destination) {
   return new Promise((resolve, reject) => {
-    distance.key(process.env.GOOGLE_MAPS_API_KEY);
     distance.mode('driving');
 
     const origins = [`${origin.latitude},${origin.longitude}`];
     const destinations = [`${destination.latitude},${destination.longitude}`];
 
+    // Use the Google Distance Matrix API to calculate the distance
     distance.matrix(origins, destinations, (err, distances) => {
       if (err) {
         reject(err);
@@ -235,50 +235,159 @@ async function calculateDistance(origin, destination) {
   });
 }
 
+const googleMapsClient = require('@google/maps').createClient({
+  key: process.env.GOOGLE_MAPS_API_KEY
+});
 
-// Пример использования функции для подсчета расстояния для каждого места
-async function handleFindPlaceCommand(chatId, bot) {
+// Function to get tourist places near a location
+function getTouristPlaces(location) {
+  return new Promise((resolve, reject) => {
+    const places = []; // Array to store tourist places
+
+    googleMapsClient.placesNearby({
+      location: [location.latitude, location.longitude],
+      radius: 200000, // Search radius in meters (200 km = 200000 m)
+      type: 'tourist_attraction', // Type of places to search (tourist attractions)
+      language: 'UA', // Language of the results
+      rankby: 'prominence' // Sort the results by prominence
+    }, (error, response) => {
+      if (error) {
+        console.error('Error with Places API', error);
+        reject(error);
+      } else {
+        response.json.results.forEach(place => {
+          const name = place.name;
+          const rating = place.rating || 'No rating';
+          const latitude = place.geometry.location.lat;
+          const longitude = place.geometry.location.lng;
+
+          // Create a place object with name, location, and rating
+          const placeObj = {
+            name: name,
+            location: {
+              latitude: latitude,
+              longitude: longitude
+            },
+            rating: rating
+          };
+
+          places.push(placeObj);
+        });
+
+        resolve(places);
+      }
+    });
+  });
+}
+
+async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
   try {
-    // Найти пользователя по chatId
-    const user = await User.findOne({ telegramId: chatId });
+    // Show a "Loading..." message while fetching and processing data
+    const loadingMessage = await bot.sendMessage(chatId, 'Loading...');
 
+    // Delayed deletion of the loading message after 4 seconds
+    setTimeout(() => {
+      bot.deleteMessage(chatId, loadingMessage.message_id);
+    }, 4000);
+
+    const user = await User.findOne({ telegramId: chatId });
     if (!user || !user.isAuthorized) {
-      // Если пользователь не найден или не авторизован, отправить запрос на авторизацию
       return sendAuthorizationRequest(chatId, bot);
     }
 
-    // Получить координаты пользователя
     const userLocation = user.location;
+    const placesFromDB = await Place.find({});
+    const touristPlaces = await getTouristPlaces(userLocation);
 
-    // Получить все места из базы данных
-    const places = await Place.find({});
+    const places = [...placesFromDB, ...touristPlaces];
 
-    // Пройтись по каждому месту и подсчитать расстояние до пользователя
+    // Calculate distances between user's location and places
     const distances = [];
     for (const place of places) {
       const placeLocation = place.location;
-
-      // Вызвать функцию calculateDistance для подсчета расстояния
       const distanceResult = await calculateDistance(userLocation, placeLocation);
+      const km = distanceResult.km;
+      const m = distanceResult.m;
 
-      // Сохранить название места и расстояние в формате "Место - XXXX км XXXX м."
-      const formattedDistance = `${place.name} - ${distanceResult.km} км ${distanceResult.m} м.`;
+      // Exclude places that are more than 200 km away
+      if (km > 200) {
+        continue;
+      }
+
+      const rating = place.rating || 'No rating yet';
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${placeLocation.latitude},${placeLocation.longitude}`;
+
+      const formattedDistance = {
+        name: place.name,
+        km: km,
+        m: m,
+        rating: rating,
+        latitude: placeLocation.latitude,
+        longitude: placeLocation.longitude,
+        mapUrl: mapUrl
+      };
 
       distances.push(formattedDistance);
     }
 
-    // Отправить пользователю список мест и расстояний
-    const message = distances.join('\n');
-    bot.sendMessage(chatId, message);
+    // Sort distances based on the calculated distance
+    distances.sort((a, b) => {
+      const distanceA = a.km * 1000 + a.m;
+      const distanceB = b.km * 1000 + b.m;
+      return distanceA - distanceB;
+    });
+
+    const itemsPerPage = 5;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedDistances = distances.slice(startIndex, endIndex);
+
+    // Format the distances into a readable message
+    const formattedDistances = paginatedDistances.map(distance => {
+      const { name, km, m, rating, latitude, longitude, mapUrl } = distance;
+      return `${name} - ${km} km ${m} m. Rating: ${rating} [Google Maps](${mapUrl})\n`;
+    });
+
+    const totalPages = Math.ceil(distances.length / itemsPerPage);
+    const currentPage = page;
+
+    let message = formattedDistances.join('\n\n');
+    message += `\n\nPage ${currentPage} of ${totalPages}`;
+
+    const keyboard = [];
+    if (currentPage > 1) {
+      keyboard.push({ text: 'Previous', callback_data: `prevPage:${currentPage - 1}` });
+    }
+    if (currentPage < totalPages) {
+      keyboard.push({ text: 'Next', callback_data: `nextPage:${currentPage + 1}` });
+    }
+
+    const options = {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [keyboard]
+      }
+    };
+
+    if (messageId) {
+      bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: messageId,
+        ...options
+      });
+    } else {
+      bot.sendMessage(chatId, message, options)
+        .then(sentMessage => {
+          const newMessageId = sentMessage.message_id;
+          // Save the ID of the new message for future updates
+          user.lastMessageId = newMessageId;
+          user.save();
+        });
+    }
   } catch (error) {
-    console.error('Error in handleFindPlaceCommand:', error);
-    bot.sendMessage(chatId, 'An error occurred. Please try again later.');
+    console.error('Error handling find place command:', error);
   }
 }
-
-
-
-
 
 module.exports = {
   handleAddPlaceCommand,

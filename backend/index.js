@@ -52,6 +52,19 @@ bot.onText(/\/places/, (msg) => {
   handleOptionalButtons(msg.chat.id, bot);
 });
 
+bot.on('callback_query', async query => {
+  const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
+  const data = query.data;
+
+  if (data.startsWith('prevPage:')) {
+    const page = parseInt(data.split(':')[1]);
+    handleFindPlaceCommand(chatId, bot, page, messageId);
+  } else if (data.startsWith('nextPage:')) {
+    const page = parseInt(data.split(':')[1]);
+    handleFindPlaceCommand(chatId, bot, page, messageId);
+  }
+});
 
 //call back for add place and find place
 bot.on('callback_query', (msg) => {
