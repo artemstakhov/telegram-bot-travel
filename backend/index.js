@@ -78,7 +78,6 @@ bot.on('callback_query', async (query) => {
 
 //call back for add place and find place
 bot.on('callback_query', (msg) => {
-	const messagfewId= '';
 	const data = msg.data;
 	const chatId = msg.from.id;
 	const userId = msg.from.id; // Use the correct field to get the user_id value
