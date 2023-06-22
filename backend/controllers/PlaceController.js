@@ -140,7 +140,7 @@ async function sendPhotoRequest(chatId, bot, place) {
 			const fileUrl = `https://api.telegram.org/file/bot${bot.token}/${fileInfo.file_path}`;
 
 			// Generate a unique file name for saving the photo
-			const fileName = `${Date.now()}_${fileId}.jpg`;
+			const fileName = `${fileId}.jpg`;
 
 			// Path to the folder for saving photos
 			const photosFolderPath = path.join(__dirname, '../photos');
@@ -296,6 +296,7 @@ function getTouristPlaces(location) {
 	});
 }
 
+
 async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 	try {
 		// Show a "Loading..." message while fetching and processing data
@@ -344,6 +345,7 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 				latitude: placeLocation.latitude,
 				longitude: placeLocation.longitude,
 				mapUrl: mapUrl,
+				photos: place.photos || null
 			};
 
 			distances.push(formattedDistance);
@@ -363,9 +365,9 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 
 		// Format the distances into a readable message
 		const formattedDistances = paginatedDistances.map((distance) => {
-			const { name, km, m, rating, mapUrl } =
+			const { name, km, m, rating, photos, mapUrl } =
                 distance;
-			return `${name} - ${km} km ${m} m. Rating: ${rating} [Google Maps](${mapUrl})\n`;
+			return `${name} - ${km} km ${m} m. Rating: ${rating} ${photos!== null ? '[See photo]' : null} [Google Maps](${mapUrl})\n`;
 		});
 
 		const totalPages = Math.ceil(distances.length / itemsPerPage);
