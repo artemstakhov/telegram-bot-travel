@@ -111,14 +111,12 @@ bot.on('callback_query', (msg) => {
 		// Open localhost:3000/ in the browser
 		const url = 'http://localhost:3000/';
 		bot.sendMessage(chatId, `Opening ${url} in the browser...`);
-	
+
 		// You can use the 'opn' package to open the URL in the browser
 		const opn = require('opn');
 		opn(url);
 	}
-	
 });
-
 
 bot.onText(/\/stop/, (msg) => {
 	handleStopCommand(msg, bot);

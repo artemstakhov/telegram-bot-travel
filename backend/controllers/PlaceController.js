@@ -9,7 +9,6 @@ const distance = require('google-distance-matrix');
 require('dotenv').config();
 
 let isAdded = false;
-let isAdmin = false;
 //Handles optional button actions based on user authorization status.
 async function handleOptionalButtons(chatId, bot) {
 	const user = await User.findOne({ telegramId: chatId });
@@ -18,25 +17,36 @@ async function handleOptionalButtons(chatId, bot) {
 		// if user !auth start auth
 		return sendAuthorizationRequest(chatId, bot);
 	}
-	user.telegramId === 605296057 ? isAdmin=true : isAdmin=false;
+
+	user?.telegramId === 605296057
+		? (user.isAdmin = true)
+		: (user.isAdmin = false);
+
+	const inlineKeyboard = [
+		[
+			{
+				text: 'Add Place',
+				callback_data: 'add_place_button',
+			},
+			{
+				text: 'Find Place',
+				callback_data: 'find_place_button',
+			},
+		],
+	];
+
+	if (user.isAdmin) {
+		inlineKeyboard.push([
+			{
+				text: 'Admin',
+				callback_data: 'admin',
+			},
+		]);
+	}
+
 	const options = {
 		reply_markup: {
-			inline_keyboard: [
-				[
-					{
-						text: 'Add Place',
-						callback_data: 'add_place_button',
-					},
-					{
-						text: 'Find Place',
-						callback_data: 'find_place_button',
-					},
-					isAdmin && {
-						text: 'Admin',
-						callback_data: 'admin',
-					},
-				],
-			],
+			inline_keyboard: inlineKeyboard,
 		},
 	};
 
