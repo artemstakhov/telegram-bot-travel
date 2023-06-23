@@ -92,7 +92,9 @@ bot.on('callback_query', (msg) => {
 			{ inline_keyboard: [[]] }, // Empty array of buttons
 			{ chat_id: chatId, message_id: messageId },
 		);
-	} else if (data === 'find_place_button') {
+	}
+
+	if (data === 'find_place_button') {
 		handleFindPlaceCommand(chatId, bot);
 
 		// Get the message identifier
@@ -104,7 +106,19 @@ bot.on('callback_query', (msg) => {
 			{ chat_id: chatId, message_id: messageId },
 		);
 	}
+
+	if (data === 'admin') {
+		// Open localhost:3000/ in the browser
+		const url = 'http://localhost:3000/';
+		bot.sendMessage(chatId, `Opening ${url} in the browser...`);
+	
+		// You can use the 'opn' package to open the URL in the browser
+		const opn = require('opn');
+		opn(url);
+	}
+	
 });
+
 
 bot.onText(/\/stop/, (msg) => {
 	handleStopCommand(msg, bot);
