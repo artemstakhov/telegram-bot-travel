@@ -25,6 +25,10 @@ const userSchema = new mongoose.Schema({
 	lastMessageId: {
 		type: Number,
 	},
+	isAdmin: {
+		type: Boolean,
+		default: false,
+	},
 	location: {
 		type: {
 			latitude: {

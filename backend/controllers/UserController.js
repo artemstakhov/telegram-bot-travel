@@ -75,7 +75,7 @@ async function handleStartCommand(msg, bot) {
 	}
 
 	// Request the user's location.
-	sendLocationRequest(chatId, bot); // Move this line here
+	// Move this line here
 }
 
 // Handles the contact message sent by the user during the authorization process.
@@ -118,17 +118,18 @@ async function handleContactMessage(msg, bot) {
 
 		try {
 			await newUser.save();
-			bot.sendMessage(chatId, 'You are successfully authorized!', {
-				reply_markup: { remove_keyboard: true },
-			});
+			bot
+				.sendMessage(chatId, 'You are successfully authorized!', {
+					reply_markup: { remove_keyboard: true },
+				})
+				.then(() => sendLocationRequest(chatId, bot));
 		} catch (err) {
 			console.error('Error with saving user', err);
 			bot.sendMessage(chatId, 'Error, try later.');
 		}
 	}
-
-	// Request the user's location.
-	sendLocationRequest(chatId, bot); // Move this line here
+	await sendLocationRequest(chatId, bot);
+	// Request the user's location. // Move this line here
 }
 
 // Handles the "/stop" command to deauthorize the user.
