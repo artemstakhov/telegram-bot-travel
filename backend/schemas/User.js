@@ -22,6 +22,9 @@ const userSchema = new mongoose.Schema({
 	lastAuthorizationDate: {
 		type: Date,
 	},
+	lastMessageId: {
+		type: Number,
+	},
 	location: {
 		type: {
 			latitude: {

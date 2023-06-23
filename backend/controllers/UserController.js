@@ -59,7 +59,7 @@ async function handleStartCommand(msg, bot) {
 		// If the user is already authorized, check the time since their last authorization.
 		const currentTime = Date.now();
 		const timeSinceLastAuthorization =
-            currentTime - existingUser.lastAuthorizationDate;
+			currentTime - existingUser.lastAuthorizationDate;
 		const maxAuthorizationDuration = 60 * 60 * 1000; // 1 hour
 
 		if (timeSinceLastAuthorization >= maxAuthorizationDuration) {
@@ -206,7 +206,7 @@ async function checkAuthorizationStatus(bot) {
 			// Calculate the time since the last authorization
 			const currentTime = Date.now();
 			const timeSinceLastAuthorization =
-                currentTime - user.lastAuthorizationDate;
+				currentTime - user.lastAuthorizationDate;
 			const maxAuthorizationDuration = 60 * 60 * 1000; // 1 hour
 
 			if (timeSinceLastAuthorization >= maxAuthorizationDuration) {

@@ -106,8 +106,6 @@ bot.on('callback_query', (msg) => {
 	}
 });
 
-
-
 bot.onText(/\/stop/, (msg) => {
 	handleStopCommand(msg, bot);
 });

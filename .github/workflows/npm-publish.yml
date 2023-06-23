@@ -19,7 +19,6 @@ jobs:
       - name: ESLint
         run: npx eslint .
 
-
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
