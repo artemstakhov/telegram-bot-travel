@@ -1,6 +1,9 @@
 /* eslint-env node */
+const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
+const adminRouter = require('./router/AdminRouter');
 const {
 	handleLocationMessage,
 	handleStopCommand,
@@ -127,3 +130,21 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 console.log('Bot has been started');
+
+//API
+const app = express();
+const PORT = process.env.PORT || 3002;
+app.use(
+	cors({
+		credentials: true,
+		origin: [
+			'http://localhost:3000',
+		],
+	})
+);
+app.use(express.json());
+
+app.use('/places', adminRouter);
+app.listen(PORT, () => {
+	console.log(`server runing on PORT ${PORT}`);
+});
