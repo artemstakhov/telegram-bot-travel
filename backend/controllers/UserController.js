@@ -1,9 +1,72 @@
 const User = require('../schemas/User');
 
+const banUser = async (req, res, next) => {
+	const userId = req.params.id;
+
+	try {
+		const user = await User.findOne({ telegramId: userId });
+
+		if (!user) {
+			return res.status(404).json({ message: 'User not found' });
+		}
+
+		user.isBanned = true;
+		await user.save();
+
+		res.status(200).json({ message: 'User banned' });
+	} catch (err) {
+		next(err);
+	}
+};
+
+const unBanUser = async (req, res, next) => {
+	const telegramId = req.params.id;
+
+	try {
+		// Находим пользователя по telegramId
+		const user = await User.findOne({ telegramId });
+
+		if (!user) {
+			return res.status(404).json({ message: 'User not found' });
+		}
+
+
+		// Обновляем поле isBanned для пользователя в базе данных
+		user.isBanned = false;
+		await user.save();
+
+		res.status(200).json({ message: 'User unbanned' });
+	} catch (err) {
+		next(err);
+	}
+};
 // Sends a message indicating that the user is already authorized.
 async function sendAlreadyAuthorizedMessage(chatId, bot) {
 	bot.sendMessage(chatId, 'You are already authorized.');
 }
+
+async function checkBanStatus(bot, msg) {
+	try {
+		const user = await User.findOne({ telegramId: msg.from.id });
+
+		if (user && user.isBanned) {
+			try {
+				// await bot.restrictChatMember(msg.chat.id, user.telegramId, {
+				//   can_send_messages: false,
+				//   until_date: Math.floor(Date.now() / 1000) + 3153600000, // 100 years in seconds
+				// });
+				bot.sendMessage(msg.chat.id, 'You are banned. Don\'t chat to me.');
+				user.isAuthorized = false;
+				await user.save(); // Сохранение изменений в базе данных
+			} catch (error) {
+				console.error(`Error banning user ${user.telegramId}:`, error);
+			}
+		}
+	} catch (error) {
+		console.error('Error checking ban status:', error);
+	}
+}
+
 
 // Sends an authorization request to the user.
 async function sendAuthorizationRequest(chatId, bot) {
@@ -237,4 +300,7 @@ module.exports = {
 	handleLocationMessage,
 	checkAuthorizationStatus,
 	sendAuthorizationRequest,
+	banUser,
+	unBanUser,
+	checkBanStatus
 };

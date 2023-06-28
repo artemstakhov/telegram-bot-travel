@@ -4,6 +4,8 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const TelegramBot = require('node-telegram-bot-api');
 const adminRouter = require('./router/AdminRouter');
+const { banUser, unBanUser, checkBanStatus } = require('./controllers/UserController');
+
 const {
 	handleLocationMessage,
 	handleStopCommand,
@@ -36,6 +38,9 @@ const myCommands = [
 
 bot.setMyCommands(myCommands);
 
+bot.on('message', (msg) => {
+	checkBanStatus(bot, msg);
+});
 bot.onText(/\/start/, (msg) => {
 	handleStartCommand(msg, bot);
 });
@@ -62,6 +67,7 @@ bot.on('location', (msg) => {
 });
 
 bot.onText(/\/places/, (msg) => {
+
 	handleOptionalButtons(msg.chat.id, bot);
 });
 
@@ -144,7 +150,13 @@ app.use(
 );
 app.use(express.json());
 
-app.use('/places', adminRouter);
+app.post('/admin/ban/:id', (req, res, next) => {
+	banUser(req, res, next);
+});
+app.post('/admin/unban/:id', (req, res, next) => {
+	unBanUser(req, res, next);
+});
+app.use('/admin', adminRouter);
 app.listen(PORT, () => {
 	console.log(`server runing on PORT ${PORT}`);
 });
