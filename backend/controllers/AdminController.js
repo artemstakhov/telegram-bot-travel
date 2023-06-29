@@ -47,9 +47,19 @@ const showBannedUsers = async (req, res, next) => {
 	}
 };
 
+const showNoBannedUsers = async (req, res, next) => {
+	try {
+		const noBannedUsers = await User.find({ isBanned: false });
+		res.status(200).json(noBannedUsers);
+	} catch (err) {
+		next(err);
+	}
+};
+
 module.exports = {
 	getPlaces,
 	deleteUserPlaces,
 	deletePlace,
 	showBannedUsers,
+	showNoBannedUsers,
 };
