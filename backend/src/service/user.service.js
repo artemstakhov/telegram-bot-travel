@@ -1,45 +1,5 @@
 const User = require('../schemas/User');
 
-const banUser = async (req, res, next) => {
-	const userId = req.params.id;
-
-	try {
-		const user = await User.findOne({ telegramId: userId });
-
-		if (!user) {
-			return res.status(404).json({ message: 'User not found' });
-		}
-
-		user.isBanned = true;
-		await user.save();
-
-		res.status(200).json({ message: 'User banned' });
-	} catch (err) {
-		next(err);
-	}
-};
-
-const unBanUser = async (req, res, next) => {
-	const telegramId = req.params.id;
-
-	try {
-		// Находим пользователя по telegramId
-		const user = await User.findOne({ telegramId });
-
-		if (!user) {
-			return res.status(404).json({ message: 'User not found' });
-		}
-
-
-		// Обновляем поле isBanned для пользователя в базе данных
-		user.isBanned = false;
-		await user.save();
-
-		res.status(200).json({ message: 'User unbanned' });
-	} catch (err) {
-		next(err);
-	}
-};
 // Sends a message indicating that the user is already authorized.
 async function sendAlreadyAuthorizedMessage(chatId, bot) {
 	bot.sendMessage(chatId, 'You are already authorized.');
@@ -66,7 +26,6 @@ async function checkBanStatus(bot, msg) {
 		console.error('Error checking ban status:', error);
 	}
 }
-
 
 // Sends an authorization request to the user.
 async function sendAuthorizationRequest(chatId, bot) {
@@ -127,18 +86,18 @@ async function handleStartCommand(msg, bot) {
 
 		if (timeSinceLastAuthorization >= maxAuthorizationDuration) {
 			// If the time since last authorization exceeds the maximum duration, send an authorization request.
-			sendAuthorizationRequest(chatId, bot);
+			await sendAuthorizationRequest(chatId, bot);
 		} else {
 			// If the user is authorized and within the maximum duration, send a message indicating they are already authorized.
-			sendAlreadyAuthorizedMessage(chatId, bot);
+			await sendAlreadyAuthorizedMessage(chatId, bot);
 		}
 	} else {
 		// If the user is not authorized, send an authorization request.
-		sendAuthorizationRequest(chatId, bot);
+		await sendAuthorizationRequest(chatId, bot);
 	}
 
 	// Request the user's location.
-	// Move this line here
+	await sendLocationRequest(chatId, bot);
 }
 
 // Handles the contact message sent by the user during the authorization process.
@@ -191,8 +150,6 @@ async function handleContactMessage(msg, bot) {
 			bot.sendMessage(chatId, 'Error, try later.');
 		}
 	}
-	await sendLocationRequest(chatId, bot);
-	// Request the user's location. // Move this line here
 }
 
 // Handles the "/stop" command to deauthorize the user.
@@ -300,7 +257,5 @@ module.exports = {
 	handleLocationMessage,
 	checkAuthorizationStatus,
 	sendAuthorizationRequest,
-	banUser,
-	unBanUser,
-	checkBanStatus
+	checkBanStatus,
 };

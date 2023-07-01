@@ -2,59 +2,17 @@
 const Place = require('../schemas/Place');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
-const { sendAuthorizationRequest } = require('../controllers/UserController');
+const axiosAdapter = require('../adapter/axios.adapter');
+const { sendAuthorizationRequest } = require('./user.controller');
 const User = require('../schemas/User');
 const distance = require('google-distance-matrix');
 require('dotenv').config();
+const googleMapsClient = require('@google/maps').createClient({
+	key: process.env.GOOGLE_MAPS_API_KEY,
+});
 
 let isAdded = false;
 //Handles optional button actions based on user authorization status.
-async function handleOptionalButtons(chatId, bot) {
-	const user = await User.findOne({ telegramId: chatId });
-
-	if (!user || !user.isAuthorized) {
-		// if user !auth start auth
-		return sendAuthorizationRequest(chatId, bot);
-	}
-
-	user?.telegramId === 605296057
-		? (user.isAdmin = true)
-		: (user.isAdmin = false);
-
-	const inlineKeyboard = [
-		[
-			{
-				text: 'Add Place',
-				callback_data: 'add_place_button',
-			},
-			{
-				text: 'Find Place',
-				callback_data: 'find_place_button',
-			},
-		],
-	];
-
-	if (user.isAdmin) {
-		inlineKeyboard.push([
-			{
-				text: 'Admin',
-				callback_data: 'admin',
-			},
-		]);
-	}
-
-	const options = {
-		reply_markup: {
-			inline_keyboard: inlineKeyboard,
-		},
-	};
-
-	return (
-		!isAdded &&
-		(await bot.sendMessage(chatId, 'Please select an option:', options))
-	);
-}
 
 //Sends a request for the user to send their location.
 async function sendPlaceLocation(chatId, bot, place) {
@@ -168,9 +126,7 @@ async function sendPhotoRequest(chatId, bot, place) {
 			const filePath = path.join(photosFolderPath, fileName);
 
 			// Download the photo
-			const response = await axios({
-				method: 'GET',
-				url: fileUrl,
+			const response = await axiosAdapter.getWithAdapter(fileUrl, {
 				responseType: 'stream',
 			});
 
@@ -223,13 +179,6 @@ async function savePlace(chatId, bot, place) {
 }
 
 //Handles the "add place" command initiated by the user.
-async function handleAddPlaceCommand(chatId, bot, userId) {
-	isAdded = true;
-	const place = {
-		user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
-	};
-	sendPlaceLocation(chatId, bot, place);
-}
 
 distance.key(process.env.GOOGLE_MAPS_API_KEY);
 
@@ -257,10 +206,6 @@ async function calculateDistance(origin, destination) {
 		});
 	});
 }
-
-const googleMapsClient = require('@google/maps').createClient({
-	key: process.env.GOOGLE_MAPS_API_KEY,
-});
 
 // Function to get tourist places near a location
 function getTouristPlaces(location) {
@@ -304,6 +249,104 @@ function getTouristPlaces(location) {
 			},
 		);
 	});
+}
+
+async function handleSelectedPlace(chatId, bot, placeId) {
+	try {
+		const place = await Place.findOne({ _id: placeId });
+		if (!place) {
+			return;
+		}
+
+		const { name, description, rating, photos } = place;
+
+		let message = `Name: ${name}\nDescription: ${description}\nRating: ${rating}\n`;
+
+		if (photos && photos.length > 0) {
+			const media = photos.map((photoPath) => ({
+				type: 'photo',
+				media: photoPath,
+			}));
+			await bot.sendMediaGroup(chatId, media);
+		} else {
+			message += 'No photos available.';
+		}
+
+		await bot.sendMessage(chatId, message);
+
+		// Create the inline keyboard with the "Leave Feedback" button
+		const keyboard = {
+			inline_keyboard: [
+				[
+					{
+						text: 'Leave Feedback',
+						callback_data: 'leave_feedback',
+					},
+				],
+			],
+		};
+
+		// Send the message with the inline keyboard
+		await bot.sendMessage(chatId, 'Leave Feedback', {
+			reply_markup: keyboard,
+		});
+
+		// Handle the callback query when the user clicks the "Leave Feedback" button
+		bot.once('callback_query', async (query) => {
+			if (query.data === 'leave_feedback') {
+				// Prompt the user to enter the rating
+				bot
+					.sendMessage(
+						chatId,
+						'Please enter the rating of the place (from 1 to 5):',
+					)
+					.then(() => {
+						bot.once('text', async (msg) => {
+							const rating = parseInt(msg.text);
+							if (isNaN(rating) || rating < 1 || rating > 5) {
+								bot.sendMessage(
+									chatId,
+									'Invalid rating. Please enter a number from 1 to 5.',
+								);
+							} else {
+								if (!Array.isArray(place.all_rating)) {
+									place.all_rating = [];
+								}
+								place.all_rating.push(rating);
+
+								// Calculate the new average rating
+								const allRatings = place.all_rating;
+								const sum = allRatings.reduce(
+									(accumulator, currentRating) => accumulator + currentRating,
+									0,
+								);
+								const averageRating = sum / allRatings.length;
+
+								// Update the place's rating with the new average
+								place.rating = averageRating;
+
+								// Save the updated place object
+								await place.save();
+
+								// Send a message confirming the rating and the updated average rating
+								const message = `Thank you for your rating!\nAverage Rating: ${averageRating}`;
+								bot.sendMessage(chatId, message);
+							}
+						});
+					});
+			}
+		});
+	} catch (error) {
+		console.error('Error handling selected place:', error);
+	}
+}
+
+async function handleAddPlaceCommand(chatId, bot, userId) {
+	isAdded = true;
+	const place = {
+		user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
+	};
+	sendPlaceLocation(chatId, bot, place);
 }
 
 async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
@@ -502,94 +545,50 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 	}
 }
 
-async function handleSelectedPlace(chatId, bot, placeId) {
-	try {
-		const place = await Place.findOne({ _id: placeId });
-		if (!place) {
-			return;
-		}
+async function handleOptionalButtons(chatId, bot) {
+	const user = await User.findOne({ telegramId: chatId });
 
-		const { name, description, rating, photos } = place;
-
-		let message = `Name: ${name}\nDescription: ${description}\nRating: ${rating}\n`;
-
-		if (photos && photos.length > 0) {
-			const media = photos.map((photoPath) => ({
-				type: 'photo',
-				media: photoPath,
-			}));
-			await bot.sendMediaGroup(chatId, media);
-		} else {
-			message += 'No photos available.';
-		}
-
-		await bot.sendMessage(chatId, message);
-
-		// Create the inline keyboard with the "Leave Feedback" button
-		const keyboard = {
-			inline_keyboard: [
-				[
-					{
-						text: 'Leave Feedback',
-						callback_data: 'leave_feedback',
-					},
-				],
-			],
-		};
-
-		// Send the message with the inline keyboard
-		await bot.sendMessage(chatId, 'Leave Feedback', {
-			reply_markup: keyboard,
-		});
-
-		// Handle the callback query when the user clicks the "Leave Feedback" button
-		bot.once('callback_query', async (query) => {
-			if (query.data === 'leave_feedback') {
-				// Prompt the user to enter the rating
-				bot
-					.sendMessage(
-						chatId,
-						'Please enter the rating of the place (from 1 to 5):',
-					)
-					.then(() => {
-						bot.once('text', async (msg) => {
-							const rating = parseInt(msg.text);
-							if (isNaN(rating) || rating < 1 || rating > 5) {
-								bot.sendMessage(
-									chatId,
-									'Invalid rating. Please enter a number from 1 to 5.',
-								);
-							} else {
-								if (!Array.isArray(place.all_rating)) {
-									place.all_rating = [];
-								}
-								place.all_rating.push(rating);
-
-								// Calculate the new average rating
-								const allRatings = place.all_rating;
-								const sum = allRatings.reduce(
-									(accumulator, currentRating) => accumulator + currentRating,
-									0,
-								);
-								const averageRating = sum / allRatings.length;
-
-								// Update the place's rating with the new average
-								place.rating = averageRating;
-
-								// Save the updated place object
-								await place.save();
-
-								// Send a message confirming the rating and the updated average rating
-								const message = `Thank you for your rating!\nAverage Rating: ${averageRating}`;
-								bot.sendMessage(chatId, message);
-							}
-						});
-					});
-			}
-		});
-	} catch (error) {
-		console.error('Error handling selected place:', error);
+	if (!user || !user.isAuthorized) {
+		// if user !auth start auth
+		return sendAuthorizationRequest(chatId, bot);
 	}
+
+	user?.telegramId === 605296057
+		? (user.isAdmin = true)
+		: (user.isAdmin = false);
+
+	const inlineKeyboard = [
+		[
+			{
+				text: 'Add Place',
+				callback_data: 'add_place_button',
+			},
+			{
+				text: 'Find Place',
+				callback_data: 'find_place_button',
+			},
+		],
+	];
+
+	if (user.isAdmin) {
+		inlineKeyboard.push([
+			{
+				text: 'Admin',
+				callback_data: 'admin',
+			},
+		]);
+	}
+
+	const options = {
+		reply_markup: {
+			inline_keyboard: inlineKeyboard,
+		},
+	};
+
+	return (
+		!isAdded &&
+		(await bot.sendMessage(chatId, 'Please select an option:', options))
+	);
 }
 
 module.exports = {

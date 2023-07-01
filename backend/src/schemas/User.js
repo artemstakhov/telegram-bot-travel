@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
 		type: Boolean,
 		default: false,
 	},
-	isBanned:{
+	isBanned: {
 		type: Boolean,
 		default: false,
 	},
