@@ -119,6 +119,7 @@ async function handleContactMessage(msg, bot) {
 			bot.sendMessage(chatId, 'You are successfully authorized!', {
 				reply_markup: { remove_keyboard: true },
 			});
+			await sendLocationRequest(chatId, bot);
 		} catch (err) {
 			console.error('Error with saving user', err);
 			bot.sendMessage(chatId, 'Error, try later.');

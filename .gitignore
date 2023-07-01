@@ -1,7 +1,7 @@
-backend/node_modules/
+backend/src/node_modules/
 node_modules/
 README.md
-backend/photos
+backend/src/photos
 .vscode
 
 # Logs
@@ -75,7 +75,7 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
-backend/.env
+backend/src/.env
 .env.test
 
 # parcel-bundler cache (https://parceljs.org/)

@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const config = require('../config');
+
+const environment = process.env.NODE_ENV || 'development';
+const currentConfig = config[environment];
 
 mongoose
-	.connect(process.env.dbLink, {
+	.connect(currentConfig.dbLink, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
 	})

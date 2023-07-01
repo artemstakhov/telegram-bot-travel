@@ -8,11 +8,10 @@ const {
 	checkBanStatus,
 } = require('../controllers/user.controller');
 const {
-	handleOptionalButtons,
 	handleAddPlaceCommand,
 	handleFindPlaceCommand,
 } = require('../controllers/place.controller');
-
+const { handleOptionalButtons } = require('../service/place.service');
 module.exports = function (bot) {
 	const myCommands = [
 		{ command: '/start', description: 'start your conversation' },
