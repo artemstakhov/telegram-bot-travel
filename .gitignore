@@ -1,7 +1,7 @@
-backend/src/node_modules/
+backend/node_modules/
 node_modules/
 README.md
-backend/src/photos
+backend/photos
 .vscode
 
 # Logs
