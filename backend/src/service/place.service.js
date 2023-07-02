@@ -9,6 +9,7 @@ require('dotenv').config();
 const googleMapsClient = require('@google/maps').createClient({
 	key: process.env.GOOGLE_MAPS_API_KEY,
 });
+const { botErrorLogger } = require('../adapter/pino.adapter');
 //Sends a request for the user to send their location.
 async function sendPlaceLocation(chatId, bot, place) {
 	const options = {
@@ -82,14 +83,14 @@ async function sendPlaceRating(chatId, bot, place) {
 						chatId,
 						'Invalid rating. Please enter a number from 1 to 5.',
 					); // If the rating is not a valid number from 1 to 5, send an error message
-					sendPlaceRating(chatId, bot, place); // Prompt the user to enter a valid rating again
-				} else {
-					if (!Array.isArray(place.all_rating)) {
-						place.all_rating = [];
-					}
-					place.all_rating.push(rating); // Add the rating to the array of all ratings for the place
-					sendPhotoRequest(chatId, bot, place); // Proceed to request photos for the place
+					return sendPlaceRating(chatId, bot, place); // Prompt the user to enter a valid rating again
 				}
+
+				if (!Array.isArray(place.all_rating)) {
+					place.all_rating = [];
+				}
+				place.all_rating.push(rating); // Add the rating to the array of all ratings for the place
+				sendPhotoRequest(chatId, bot, place); // Proceed to request photos for the place
 			});
 		});
 }
@@ -136,13 +137,12 @@ async function sendPhotoRequest(chatId, bot, place) {
 				chatId,
 				'Photo received! Please send the next one, or send any other message to finish.',
 			);
-		} else {
-			// If a message that is not a photo is received, call the savePlace method
-			savePlace(chatId, bot, place);
-
-			// Turn off the message event handler
-			bot.off('message', messageHandler);
+			return messageHandler;
 		}
+
+		// Call the savePlace method and turn off the message event handler
+		savePlace(chatId, bot, place);
+		bot.off('message', messageHandler);
 	};
 
 	// Expect the delivery of photos or messages that are not photos
@@ -167,7 +167,7 @@ async function savePlace(chatId, bot, place) {
 
 		// Clear saved data
 	} catch (err) {
-		console.error('Error saving place', err); // Log the error message if saving the place fails
+		botErrorLogger('Error saving place', err); // Log the error message if saving the place fails
 		bot.sendMessage(chatId, 'Error saving place. Please try again later.'); // Send an error message to the user
 	}
 }
@@ -188,15 +188,19 @@ async function calculateDistance(origin, destination) {
 		distance.matrix(origins, destinations, (err, distances) => {
 			if (err) {
 				reject(err);
-			} else if (!distances || distances.status !== 'OK') {
-				reject(new Error('Unable to calculate distance.'));
-			} else {
-				const distanceResult = distances.rows[0].elements[0].distance;
-				const km = Math.floor(distanceResult.value / 1000);
-				const m = distanceResult.value % 1000;
-
-				resolve({ km, m });
+				return;
 			}
+
+			if (!distances || distances.status !== 'OK') {
+				reject(new Error('Unable to calculate distance.'));
+				return;
+			}
+
+			const distanceResult = distances.rows[0].elements[0].distance;
+			const km = Math.floor(distanceResult.value / 1000);
+			const m = distanceResult.value % 1000;
+
+			resolve({ km, m });
 		});
 	});
 }
@@ -216,30 +220,31 @@ function getTouristPlaces(location) {
 			},
 			(error, response) => {
 				if (error) {
-					console.error('Error with Places API', error);
+					botErrorLogger('Error with Places API', error);
 					reject(error);
-				} else {
-					response.json.results.forEach((place) => {
-						const name = place.name;
-						const rating = place.rating || 'No rating';
-						const latitude = place.geometry.location.lat;
-						const longitude = place.geometry.location.lng;
-
-						// Create a place object with name, location, and rating
-						const placeObj = {
-							name: name,
-							location: {
-								latitude: latitude,
-								longitude: longitude,
-							},
-							rating: rating,
-						};
-
-						places.push(placeObj);
-					});
-
-					resolve(places);
+					return;
 				}
+
+				response.json.results.forEach((place) => {
+					const name = place.name;
+					const rating = place.rating || 'No rating';
+					const latitude = place.geometry.location.lat;
+					const longitude = place.geometry.location.lng;
+
+					// Create a place object with name, location, and rating
+					const placeObj = {
+						name: name,
+						location: {
+							latitude: latitude,
+							longitude: longitude,
+						},
+						rating: rating,
+					};
+
+					places.push(placeObj);
+				});
+
+				resolve(places);
 			},
 		);
 	});
@@ -247,7 +252,7 @@ function getTouristPlaces(location) {
 
 async function handleSelectedPlace(chatId, bot, placeId) {
 	try {
-		const place = await Place.findOne({ _id: placeId });
+		const place = await Place.findOne({ _id: placeId }).lean();
 		if (!place) {
 			return;
 		}
@@ -302,41 +307,42 @@ async function handleSelectedPlace(chatId, bot, placeId) {
 									chatId,
 									'Invalid rating. Please enter a number from 1 to 5.',
 								);
-							} else {
-								if (!Array.isArray(place.all_rating)) {
-									place.all_rating = [];
-								}
-								place.all_rating.push(rating);
-
-								// Calculate the new average rating
-								const allRatings = place.all_rating;
-								const sum = allRatings.reduce(
-									(accumulator, currentRating) => accumulator + currentRating,
-									0,
-								);
-								const averageRating = sum / allRatings.length;
-
-								// Update the place's rating with the new average
-								place.rating = averageRating;
-
-								// Save the updated place object
-								await place.save();
-
-								// Send a message confirming the rating and the updated average rating
-								const message = `Thank you for your rating!\nAverage Rating: ${averageRating}`;
-								bot.sendMessage(chatId, message);
+								return;
 							}
+
+							if (!Array.isArray(place.all_rating)) {
+								place.all_rating = [];
+							}
+							place.all_rating.push(rating);
+
+							// Calculate the new average rating
+							const allRatings = place.all_rating;
+							const sum = allRatings.reduce(
+								(accumulator, currentRating) => accumulator + currentRating,
+								0,
+							);
+							const averageRating = sum / allRatings.length;
+
+							// Update the place's rating with the new average
+							await Place.updateOne(
+								{ _id: place._id },
+								{ rating: averageRating },
+							);
+
+							// Send a message confirming the rating and the updated average rating
+							const message = `Thank you for your rating!\nAverage Rating: ${averageRating}`;
+							bot.sendMessage(chatId, message);
 						});
 					});
 			}
 		});
 	} catch (error) {
-		console.error('Error handling selected place:', error);
+		botErrorLogger('Error handling selected place:', error);
 	}
 }
 
 async function handleOptionalButtons(chatId, bot) {
-	const user = await User.findOne({ telegramId: chatId });
+	const user = await User.findOne({ telegramId: chatId }).lean();
 
 	if (!user || !user.isAuthorized) {
 		// if user !auth start auth
@@ -386,13 +392,21 @@ async function paginationCallback(bot) {
 		if (data.startsWith('placeId:')) {
 			const placeId = data.split(':')[1];
 			await handleSelectedPlace(chatId, bot, placeId);
-		} else if (data.startsWith('prevPage:')) {
+			return;
+		}
+
+		if (data.startsWith('prevPage:')) {
 			// Handle previous page action
-		} else if (data.startsWith('nextPage:')) {
+			return;
+		}
+
+		if (data.startsWith('nextPage:')) {
 			// Handle next page action
+			return;
 		}
 	});
 }
+
 async function checkUserAuth(user, chatId, bot) {
 	if (!user || !user.isAuthorized) {
 		return sendAuthorizationRequest(chatId, bot);
@@ -553,42 +567,42 @@ async function showMessage(
 		} catch (error) {
 			return;
 		}
-	} else {
-		const sentMessage = await bot.sendMessage(chatId, message, options);
-		const newMessageId = sentMessage.message_id;
-		user.lastMessageId = newMessageId;
-		user.save();
+		return;
+	}
+	const sentMessage = await bot.sendMessage(chatId, message, options);
+	const newMessageId = sentMessage.message_id;
+	user.lastMessageId = newMessageId;
+	await user.updateOne({ lastMessageId: newMessageId });
 
-		const placeIdsOnPage = paginatedDistances.map((distance) => distance.name);
-		const placesFromDBFiltered = placesFromDB.filter((place) =>
-			placeIdsOnPage.includes(place.name),
-		);
-		const optFiltered = placesFromDBFiltered.map((place) => {
-			const text = place.name;
-			const callback_data = place._id ? place._id.toString() : '';
-			return {
-				text,
-				callback_data,
-			};
+	const placeIdsOnPage = paginatedDistances.map((distance) => distance.name);
+	const placesFromDBFiltered = placesFromDB.filter((place) =>
+		placeIdsOnPage.includes(place.name),
+	);
+	const optFiltered = placesFromDBFiltered.map((place) => {
+		const text = place.name;
+		const callback_data = place._id ? place._id.toString() : '';
+		return {
+			text,
+			callback_data,
+		};
+	});
+
+	if (optFiltered.length > 0) {
+		const keyboardNamesFiltered = {
+			inline_keyboard: [
+				optFiltered.map((opt) => ({
+					...opt,
+					callback_data: `placeId:${opt.callback_data}`,
+				})),
+			],
+		};
+		const mesText =
+			optFiltered.length > 0
+				? 'See photos or give a review'
+				: 'No photos in there, check it on Google Maps';
+		await bot.sendMessage(chatId, mesText, {
+			reply_markup: keyboardNamesFiltered,
 		});
-
-		if (optFiltered.length > 0) {
-			const keyboardNamesFiltered = {
-				inline_keyboard: [
-					optFiltered.map((opt) => ({
-						...opt,
-						callback_data: `placeId:${opt.callback_data}`,
-					})),
-				],
-			};
-			const mesText =
-				optFiltered.length > 0
-					? 'See photos or give a review'
-					: 'No photos in there, check it on Google Maps';
-			await bot.sendMessage(chatId, mesText, {
-				reply_markup: keyboardNamesFiltered,
-			});
-		}
 	}
 }
 

@@ -1,8 +1,9 @@
 const Place = require('../schemas/Place');
 const User = require('../schemas/User');
+const { expressErrorLogger } = require('../adapter/pino.adapter');
 
 const getPlaces = async () => {
-	return await Place.find();
+	return await Place.find().lean();
 };
 
 const deleteUserPlaces = async (userId) => {
@@ -10,37 +11,36 @@ const deleteUserPlaces = async (userId) => {
 };
 
 const deletePlace = async (placeId) => {
-	return await Place.findByIdAndDelete(placeId);
+	return await Place.findByIdAndDelete(placeId).lean();
 };
 
 const getBannedUsers = async () => {
-	return await User.find({ isBanned: true });
+	return await User.find({ isBanned: true }).lean();
 };
 
 const getNonBannedUsers = async () => {
-	return await User.find({ isBanned: false });
+	return await User.find({ isBanned: false }).lean();
 };
 
 const banUser = async (userId) => {
-	const user = await User.findOne({ telegramId: userId });
+	const user = await User.findOne({ telegramId: userId }).lean();
 
 	if (!user) {
-		throw new Error('User not found');
+		expressErrorLogger('User not found');
 	}
 
-	user.isBanned = true;
-	await user.save();
+	await User.updateOne({ _id: user._id }, { isBanned: true });
 };
 
 const unbanUser = async (telegramId) => {
-	const user = await User.findOne({ telegramId });
+	const user = await User.findOne({ telegramId }).lean();
 
 	if (!user) {
-		throw new Error('User not found');
+		expressErrorLogger('User not found');
+		return;
 	}
 
-	user.isBanned = false;
-	await user.save();
+	await User.updateOne({ _id: user._id }, { isBanned: false });
 };
 
 module.exports = {

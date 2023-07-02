@@ -1,6 +1,7 @@
 /* eslint-env node */
 const Place = require('../schemas/Place');
 const User = require('../schemas/User');
+const { botErrorLogger } = require('../adapter/pino.adapter');
 const {
 	sendPlaceLocation,
 	paginationCallback,
@@ -12,7 +13,7 @@ const {
 
 async function handleAddPlaceCommand(chatId, bot, userId) {
 	const place = {
-		user_id: userId, // Сохраняем Telegram ID пользователя в поле user_id
+		user_id: userId,
 	};
 	sendPlaceLocation(chatId, bot, place);
 }
@@ -23,12 +24,12 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 
 		setTimeout(async () => {
 			await bot.deleteMessage(chatId, loadingMessage.message_id);
-			const user = await User.findOne({ telegramId: chatId });
+			const user = await User.findOne({ telegramId: chatId }).lean();
 
 			await checkUserAuth(user, chatId, bot);
 
 			const userLocation = user.location;
-			const placesFromDB = await Place.find({});
+			const placesFromDB = await Place.find({}).lean();
 			const touristPlaces = await getTouristPlaces(userLocation);
 
 			const places = [...placesFromDB, ...touristPlaces];
@@ -47,7 +48,7 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 		}, 4000);
 		await paginationCallback(bot);
 	} catch (error) {
-		console.error('Error handling find place command:', error);
+		botErrorLogger('Error handling find place command:', error);
 	}
 }
 

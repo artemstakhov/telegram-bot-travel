@@ -12,6 +12,8 @@ const {
 	handleFindPlaceCommand,
 } = require('../controllers/place.controller');
 const { handleOptionalButtons } = require('../service/place.service');
+const { logInfoBot, botErrorLogger } = require('../adapter/pino.adapter');
+const User = require('../schemas/User');
 module.exports = function (bot) {
 	const myCommands = [
 		{ command: '/start', description: 'start your conversation' },
@@ -37,8 +39,9 @@ module.exports = function (bot) {
 
 	bot.on('location', (msg) => {
 		handleLocationMessage(msg, bot)
-			.then(() => {
-				if (!isButtonsShown) {
+			.then(async () => {
+				const user = await User.findOne({ telegramId: msg.from.id }).lean();
+				if (!isButtonsShown && !user.isAuthorized) {
 					setTimeout(() => {
 						handleOptionalButtons(msg.chat.id, bot);
 					}, 100);
@@ -46,7 +49,7 @@ module.exports = function (bot) {
 				}
 			})
 			.catch((error) => {
-				console.error('Error handling location message', error);
+				botErrorLogger('Error handling location message', error);
 			});
 	});
 
@@ -62,7 +65,8 @@ module.exports = function (bot) {
 		if (data.startsWith('prevPage:')) {
 			const page = parseInt(data.split(':')[1]);
 			handleFindPlaceCommand(chatId, bot, page, messageId);
-		} else if (data.startsWith('nextPage:')) {
+		}
+		if (data.startsWith('nextPage:')) {
 			const page = parseInt(data.split(':')[1]);
 			handleFindPlaceCommand(chatId, bot, page, messageId);
 		}
@@ -118,5 +122,5 @@ module.exports = function (bot) {
 		checkAuthorizationStatus(bot);
 	}, 60 * 60 * 1000);
 
-	console.log('Bot has been started');
+	logInfoBot('Bot has been started');
 };

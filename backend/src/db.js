@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const config = require('../config');
+const { logInfoApp } = require('./adapter/pino.adapter');
 
 const environment = process.env.NODE_ENV || 'development';
 const currentConfig = config[environment];
@@ -9,5 +10,5 @@ mongoose
 		useNewUrlParser: true,
 		useUnifiedTopology: true,
 	})
-	.then(() => console.log('DB connected'))
-	.catch((err) => console.log('DB error', err));
+	.then(() => logInfoApp('DB connected'))
+	.catch((err) => logInfoApp('DB error', err));

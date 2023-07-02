@@ -10,5 +10,3 @@ const currentConfig = config[environment];
 const bot = new TelegramBot(currentConfig.telegramToken, { polling: true });
 
 botCommands(bot);
-
-console.log('Index.js executed');

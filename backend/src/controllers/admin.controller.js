@@ -28,9 +28,10 @@ const deletePlace = async (req, res, next) => {
 
 		if (deletedPlace) {
 			res.status(200).json({ message: 'Place deleted' });
-		} else {
-			res.status(404).json({ message: 'Place not found' });
+			return;
 		}
+
+		res.status(404).json({ message: 'Place not found' });
 	} catch (err) {
 		next(err);
 	}
