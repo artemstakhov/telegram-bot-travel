@@ -63,8 +63,8 @@ function expressErrorLogger(err) {
 	appLogger.error('Error Express:' + err);
 }
 
-function botErrorLogger(error) {
-	botLogger.error('Error bot:', error);
+function botErrorLogger(text = 'Error bot:', error) {
+	botLogger.error(text + error);
 }
 
 module.exports = {

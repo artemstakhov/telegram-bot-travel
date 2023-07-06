@@ -114,7 +114,7 @@ async function handleContactMessage(msg, bot) {
 	const chatId = msg.chat.id;
 	const userId = msg.from.id;
 
-	const existingUser = await User.findOne({ telegramId: userId }).lean();
+	const existingUser = await User.findOne({ telegramId: userId });
 
 	if (existingUser) {
 		// If the user already exists in the database, update their authorization information.

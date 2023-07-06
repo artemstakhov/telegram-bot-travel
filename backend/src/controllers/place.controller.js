@@ -24,7 +24,7 @@ async function handleFindPlaceCommand(chatId, bot, page = 1, messageId = null) {
 
 		setTimeout(async () => {
 			await bot.deleteMessage(chatId, loadingMessage.message_id);
-			const user = await User.findOne({ telegramId: chatId }).lean();
+			const user = await User.findOne({ telegramId: chatId });
 
 			await checkUserAuth(user, chatId, bot);
 
