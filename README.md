@@ -1,44 +1,44 @@
-### **Задача: Розробка бота-помічника в подорожах**
+Full Stack Developer:  TravelBot
+-	Developed both the Front-End and Back-End.
+-	Created a Telegram bot with travel-related functionalities which enabled users to discover places and add their own locations.
+-	Used Google Maps API for location-based features and photo processing.
+-	Effectively applied the Adapter Pattern in the backend to seamlessly integrate different functionalities.
+-	Ensured that the project contained robust error logging and adhered to coding best practices with ESLint, Prettier and Husky to ensure code quality and consistent formatting in commits. 
+-	Set up a Git Action to automatically validate the code against ESLint rules. 
 
-**Опис:**
 
-Необхідно створити Telegram-бота, який буде служити помічником в подорожах. Бот буде надавати інформацію про туристичні місця, пам'ятки, ресторани, готелі та пропонувати маршрути для подорожей через Google Maps. Користувачі зможуть обирати місця відпочинку або просто відвідування, отримувати рекомендації та додавати свої оцінки та фото, якщо вони авторизовані.
 
-**Вимоги:**
+Task: Development of a Travel Assistant Bot
+Description:
 
-**Telegram-бот:**
+The goal is to create a Telegram bot that will serve as a travel assistant. The bot will provide information about tourist attractions, landmarks, restaurants, and hotels, as well as offer travel routes through Google Maps. Users will be able to choose places for leisure or visitation, receive recommendations, and add their ratings and photos if they are authorized.
 
-- Бот повинен бути розроблений з використанням API Telegram.
-- Бот має надавати користувачеві інформацію про туристичні місця, пам'ятки, ресторани та готелі на основі запитів користувача по геолокації.
-- Бот повинен пропонувати маршрути для подорожей через Google Maps.
-- Користувач повинен мати можливість переглядати цікаві місця та отримувати рекомендації на основі рейтингу.
-- Бот повинен надавати можливість додавати оцінки та коментарі у текстовому вигляді до відвіданих місць.
-- Бот повинен підтримувати відображення фотографій відвіданих місць.
-- В розробці даного бота слід враховувати можливості Telegram API, обмеження за кількістю запитів та інші технічні обмеження платформи.
+Requirements:
 
-**Авторизація і реєстрація:**
+Telegram Bot:
 
-- Користувачі повинні мати можливість авторизуватися та реєструватися в боті.
-- Авторизація повинна забезпечувати безпеку та доступ тільки до особистих даних користувача.
+The bot should be developed using the Telegram API.
+The bot should provide the user with information about tourist attractions, landmarks, restaurants, and hotels based on user queries using geolocation.
+The bot should offer travel routes through Google Maps.
+Users should be able to explore interesting places and receive recommendations based on ratings.
+The bot should allow users to add ratings and comments in text format for visited places.
+The bot should support displaying photos of visited places.
+The development of this bot should take into account the capabilities of the Telegram API, limitations on the number of requests, and other technical constraints of the platform.
+Authentication and Registration:
 
-**Робота з файлами та зображеннями:**
+Users should have the ability to authenticate and register within the bot.
+Authentication should ensure security and access only to the user's personal data.
+File and Image Handling:
 
-- Бот повинен підтримувати роботу з файлами, зокрема зображеннями пам'яток та ресторанів.
-- Бот повинен мати можливість надсилати користувачеві зображення у відповідь на запити.
+The bot should support working with files, including images of landmarks and restaurants.
+The bot should be able to send images to users in response to their requests.
+Rating and Reviews:
 
-**Рейтинг та відгуки:**
+Users should have the ability to rate visited places using numbers (e.g., from 1 to 5) and add textual comments to the places.
+The bot should display the rating and reviews for each place.
+User Roles:
 
-- Користувачі повинні мати можливість оцінювати відвідані місця числом (наприклад, від 1 до 5) та додавати текстові коментарі до місць.
-- Бот повинен відображати рейтинг та відгуки для кожного місця.
-
-**Ролі користувачів:**
-
-- Бот повинен підтримувати два типи користувачів: звичайного користувача та адміністратора.
-- Звичайний користувач може додавати фотографії, залишати оцінки та мати доступ до інформації про місця. А також надсилати пропозицію про додавання нового місця.
-- Адміністратор повинен мати доступ до адміністративної панелі через посилання.
-- Адміністратор повинен мати можливість переглядати та видаляти фотографії, які були додані користувачами і не відповідають вимогам. Переглядати таприймати або відхиляти пропозиції про додавання місць.
-
-**Google Maps і геолокація:**
-
-- Бот повинен підтримувати відображення місць на карті Google Maps.
-- Користувачі повинні мати можливість відправляти свою геолокацію, щоб отримати інформацію про близькі туристичні об'єкти.
+The bot should support two types of users: regular users and administrators.
+Regular users can add photos, leave ratings, access information about places, and send proposals to add new places.
+Administrators should have access to an administrative panel through a link.
+Administrators should be able to view and delete photos that were added by users and do not meet the requirements. They should also be able to review and approve or reject proposals to add places.
